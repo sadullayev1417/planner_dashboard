@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vazifalar & Odatlar Planneri | Moliya Rejasi</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js CDN for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- TOP MODERN TOOLBAR HEADER -->
+  <header class="top-nav">
+    <div class="brand-section">
+      <div class="sheets-icon">📊</div>
+      <div class="sheet-title-box">
+        <h1 id="docTitle">Vazifalar & Odatlar Planneri | Moliya Rejasi</h1>
+        <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+          <span>⏱️ Toshkent vaqti: <b id="liveClock" style="color: var(--primary);">20:45:00</b></span>
+          <span>•</span>
+          <span>💾 Avto-saqlash faol</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLOBAL LIVE SEARCH -->
+    <div class="top-toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="globalSearchInput" placeholder="Vazifalar, odatlar yoki xarajatlardan tezkor qidirish...">
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="nav-actions">
+      <!-- Pomodoro quick trigger -->
+      <button class="btn btn-secondary" id="btnHeaderPomodoro" title="Pomodoro & Fokus Taymeri">
+        ⏱️ <span id="headerPomoText">25:00</span>
+      </button>
+
+      <!-- Dark/Light theme toggle -->
+      <button class="btn btn-secondary" id="btnToggleTheme" title="Tun / Kun rejimini almashtirish">
+        🌓 <span id="themeToggleText">Tun</span>
+      </button>
+
+      <!-- Compact tool icons -->
+      <button class="btn btn-secondary icon-only-nav-btn" id="btnToggleSound" title="Tovush effektlari">
+        🔔 <span id="soundToggleText" style="display: none;">Ovoz: Yoqiq</span>
+      </button>
+
+      <button class="btn btn-secondary icon-only-nav-btn" id="btnShortcutsModal" title="Klaviatura tezkor tugmalari (Ctrl+/)">
+        ⌨️
+      </button>
+
+      <button class="btn btn-secondary icon-only-nav-btn" id="btnPrintPage" title="Chop etish yoki PDF sifatida saqlash">
+        🖨️
+      </button>
+
+      <div class="status-indicator" id="syncStatus">
+        <span class="pulse-dot"></span>
+        <span id="syncStatusText">CSV ulangan</span>
+      </div>
+
+      <button class="btn btn-secondary" id="btnExportAllCsv" title="Barcha ma'lumotlarni CSV qilib yuklab olish">
+        📥 CSV
+      </button>
+
+      <button class="btn btn-primary" id="btnSaveCsv" title="CSV faylga saqlash">
+        💾 Saqlash
+      </button>
+    </div>
+  </header>
+
+  <!-- FORMULA & STATS BAR (HIDDEN AS REQUESTED) -->
+  <div class="formula-bar" style="display: none;">
+    <span class="cell-name" id="activeCellLabel">fx</span>
+    <input type="text" class="formula-input" id="formulaInput" value="=Vazifalar!Nazorat" readonly>
+    <div style="display: flex; gap: 16px; font-size: 12px; margin-left: auto;">
+      <span>📌 Bugungi vazifalar: <b id="statTodayTasks" style="color:#1a73e8;">0</b></span>
+      <span>•</span>
+      <span>🔥 Eng yuqori streak: <b id="statBestStreak" style="color:#ea4335;">0 kun</b></span>
+      <span>•</span>
+      <span>🪙 Oy balansi: <b id="statQuickBalance" style="color:#137333;">0 UZS</b></span>
+    </div>
+  </div>
+
+  <!-- CONTENT VIEWPORTS -->
+  <main class="content-wrapper">
+
+    <!-- ========================================================
+         TAB 0: EXECUTIVE DASHBOARD (BOSH BOSHQARUV & HISOBOT PANELI)
+         ======================================================== -->
+    <section id="tab-dashboard" class="tab-pane active">
+      <!-- DASHBOARD HEADER -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="font-size: 22px; font-weight: 800; color: var(--text-main);">📋 Kunlik Ish & Vazifalar Boshqaruvi (Action Cockpit)</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">Bugungi vazifalar, odatlar, muddatlar va diqqat-fokus markazi</p>
+        </div>
+      </div>
+
+      <!-- 4 TA ASOSIY HERO KPI KARTALAR (VAZIFALAR, ODATLAR VA FOKUS) -->
+      <div class="dash-hero-grid">
+        <!-- 1. Bugungi Vazifalar -->
+        <div class="dash-card card-blue">
+          <div class="dash-card-header">
+            <span class="dash-card-title">Bugungi Vazifalar</span>
+            <span class="dash-card-icon">📌</span>
+          </div>
+          <div class="dash-card-val" id="dashTodayTasksTotal" style="color: #1a73e8;">0 ta</div>
+          <div class="dash-card-sub">
+            <span id="dashTodayTasksPendingPill" class="trend-pill trend-up">0 ta kutilmoqda</span>
+          </div>
+        </div>
+
+        <!-- 2. Bajarilgan Ishlar -->
+        <div class="dash-card card-green">
+          <div class="dash-card-header">
+            <span class="dash-card-title">Bajarilgan Ishlar</span>
+            <span class="dash-card-icon">✅</span>
+          </div>
+          <div class="dash-card-val" id="dashTotalCompletedTasks" style="color: #137333;">0 ta</div>
+          <div class="dash-card-sub">
+            <span id="dashTaskCompletionRatePill" class="trend-pill trend-up">0% bajarildi</span>
+          </div>
+        </div>
+
+        <!-- 3. Kunlik Odatlar -->
+        <div class="dash-card card-yellow">
+          <div class="dash-card-header">
+            <span class="dash-card-title">Kunlik Odatlar</span>
+            <span class="dash-card-icon">🔥</span>
+          </div>
+          <div class="dash-card-val" id="dashTodayHabitsRatio" style="color: #e37400;">0/0</div>
+          <div class="dash-card-sub">
+            <span id="dashHabitsStreakPill" class="trend-pill trend-up">0% intizom</span>
+          </div>
+        </div>
+
+        <!-- 4. Fokus & Pomodoro -->
+        <div class="dash-card card-purple">
+          <div class="dash-card-header">
+            <span class="dash-card-title">Fokus & Pomodoro</span>
+            <span class="dash-card-icon">⏱️</span>
+          </div>
+          <div class="dash-card-val" id="dashFocusTotalTime" style="color: #a142f4;">0 daq</div>
+          <div class="dash-card-sub">
+            <span id="dashFocusSessionsPill" class="trend-pill trend-up">0 seans</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3-COLUMNS ACTION CENTER: TODAY TASKS, TODAY HABITS, UPCOMING ALARMS & DEADLINES -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <!-- Column 1: Today's Tasks -->
+        <div class="dash-widget">
+          <div class="dash-widget-header">
+            <h3>📌 Bugungi Vazifalar</h3>
+            <span class="trend-pill trend-up" id="dashTodayTasksCount">0 ta</span>
+          </div>
+          <div class="today-focus-list" id="dashTodayTasksList">
+            <!-- Dynamic items with 1-click check -->
+          </div>
+        </div>
+
+        <!-- Column 2: Today's Habits -->
+        <div class="dash-widget">
+          <div class="dash-widget-header">
+            <h3>🔄 Bugungi Odatlar</h3>
+            <span class="trend-pill trend-up" id="dashTodayHabitsCount">0/8</span>
+          </div>
+          <div class="today-focus-list" id="dashTodayHabitsList">
+            <!-- Dynamic 1-click checkboxes for today's habits -->
+          </div>
+        </div>
+
+        <!-- Column 3: Upcoming Deadlines & Alarms -->
+        <div class="dash-widget">
+          <div class="dash-widget-header">
+            <h3>⏰ Yaqin Muddatlar & Budilnik</h3>
+            <span class="trend-pill trend-up" id="dashUpcomingAlarmsCount">0 faol</span>
+          </div>
+          <div class="today-focus-list" id="dashUpcomingAlarmsList" style="max-height: 220px; overflow-y: auto;">
+            <!-- Dynamic alarms and near deadlines -->
+          </div>
+          <div style="margin-top: 8px; border-top: 1px dashed var(--border-sheet); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <button class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onclick="PlannerApp.openHeroAlarmPrompt()">
+              + Yangi budilnik
+            </button>
+            <button class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onclick="document.querySelector('[data-tab=tab-tasks]').click()">
+              Vazifalar jadvaliga o'tish ➔
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS CHARTS & HEALTH GAUGE ROW -->
+      <div class="dash-analytics-row" style="margin-bottom: 20px;">
+        <!-- Weekly Productivity Dynamics Chart -->
+        <div class="dash-widget">
+          <div class="dash-widget-header">
+            <h3>📈 Haftalik Vazifalar & Odatlar Dinamikasi</h3>
+            <span style="font-size: 11px; color: var(--text-muted);">So'nggi 7 kunlik hosildorlik</span>
+          </div>
+          <div style="height: 240px;">
+            <canvas id="dashMainChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Overall Health Index Score -->
+        <div class="dash-widget" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div class="dash-widget-header">
+            <h3>🏆 Kunlik Hosildorlik Indeksi</h3>
+          </div>
+          <div class="health-score-container">
+            <div class="score-circle" id="dashScoreCircle" style="--score-angle: 280deg;">
+              <div class="score-inner">
+                <span class="score-number" id="dashHealthScoreNumber">85%</span>
+                <span class="score-label">Hosildorlik</span>
+              </div>
+            </div>
+            <p id="dashHealthScoreDesc" style="font-size: 11px; text-align: center; color: var(--text-muted); margin-top: 10px; line-height: 1.4;">
+              Vazifalar, odatlar va diqqat-fokus intizomi a'lo darajada!
+            </p>
+          </div>
+          <div style="border-top: 1px dashed var(--border-sheet); padding-top: 8px; margin-top: 6px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+              <span>Vazifalar bajarilishi:</span>
+              <b id="dashTaskHealthVal">0%</b>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+              <span>Odatlar intizomi:</span>
+              <b id="dashHabitHealthVal">0%</b>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px;">
+              <span>Fokus seanslari:</span>
+              <b id="dashFocusHealthVal">0 daq</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QO'SHIMCHA ASBOBLAR (COLLAPSIBLE ACCORDION FOR MINIMALIST DASHBOARD) -->
+      <details class="dash-extra-tools-accordion">
+        <summary class="dash-extra-tools-summary">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 15px;">🛠️</span>
+            <span>Qo'shimcha Asboblar (Pomodoro Fokus, Strategik Maqsadlar & Eslatmalar)</span>
+          </div>
+          <span class="dash-extra-toggle-pill">Ko'rsatish / Yashirish ▾</span>
+        </summary>
+        <div class="dash-extra-tools-content">
+          <!-- FOCUS TIMER & STRATEGIC GOALS ROW -->
+          <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px;">
+            <!-- Pomodoro Focus Studio -->
+            <div class="dash-widget pomo-widget-card" id="pomodoroDashboardCard" style="border: 1px solid var(--border-sheet);">
+              <div class="dash-widget-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">⏱️</span>
+                  <h3 style="margin: 0;">Chuqur Fokus & Pomodoro (Deep Work)</h3>
+                </div>
+                <span class="trend-pill trend-up" id="pomoSessionPill">0 seans</span>
+              </div>
+
+              <div class="pomo-mode-tabs">
+                <button class="pomo-mode-btn active" data-mode="pomodoro" onclick="PlannerApp.setPomodoroMode('pomodoro')">25 daq (Pomodoro)</button>
+                <button class="pomo-mode-btn" data-mode="deep" onclick="PlannerApp.setPomodoroMode('deep')">50 daq (Chuqur Ish)</button>
+                <button class="pomo-mode-btn" data-mode="break" onclick="PlannerApp.setPomodoroMode('break')">5 daq (Tanaffus)</button>
+              </div>
+
+              <div class="pomo-timer-display" id="pomoTimerDisplay">25:00</div>
+
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Fokus qaratilayotgan vazifa:</label>
+                <select id="pomoTaskSelect" class="form-control" style="width: 100%; font-size: 12px;">
+                  <option value="">-- Vazifani tanlang (ixtiyoriy) --</option>
+                </select>
+              </div>
+
+              <div class="pomo-controls-row">
+                <button class="btn btn-primary" id="btnPomoStart" onclick="PlannerApp.startPomodoro()" style="min-width: 90px;">▶ Boshlash</button>
+                <button class="btn btn-secondary" id="btnPomoPause" onclick="PlannerApp.pausePomodoro()" style="display: none;">⏸ Pauza</button>
+                <button class="btn btn-secondary" id="btnPomoReset" onclick="PlannerApp.resetPomodoro()">🔄 Qayta</button>
+                <button class="btn btn-secondary" id="btnPomoPip" onclick="PlannerApp.togglePipWindow()" title="Barcha ilovalar ustida doimiy qalqib turuvchi pop-up">📌 Ekranda Qolish</button>
+              </div>
+            </div>
+
+            <!-- Strategic Goals 2026 -->
+            <div class="dash-widget" style="border: 1px solid var(--border-sheet);">
+              <div class="dash-widget-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">🎯</span>
+                  <h3 style="margin: 0;">2026-Yil Strategik Maqsadlar & OKR</h3>
+                </div>
+                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="PlannerApp.openAddGoalPrompt()">+ Maqsad</button>
+              </div>
+              <div class="goals-list-grid" id="goalsListGrid">
+                <!-- Dynamic Goals with progress bars -->
+              </div>
+            </div>
+          </div>
+
+          <!-- STICKY NOTES & BRAIN DUMP BOARD -->
+          <div class="dash-widget" style="margin-top: 16px; border: 1px solid var(--border-sheet);">
+            <div class="dash-widget-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">📝</span>
+                <h3 style="margin: 0;">Fikrlar & Eslatmalar Doskasi (Sticky Brain Dump)</h3>
+                <span style="font-size: 11px; color: var(--text-muted);">Miya xaritasi, tezkor qaydlar va fikrlar</span>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; background: #fef9c3; color:#713f12;" onclick="PlannerApp.addStickyNote('yellow')">+ Sariq</button>
+                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; background: #dcfce7; color:#14532d;" onclick="PlannerApp.addStickyNote('green')">+ Yashil</button>
+                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; background: #e0f2fe; color:#0c4a6e;" onclick="PlannerApp.addStickyNote('blue')">+ Moviy</button>
+                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; background: #fce7f3; color:#831843;" onclick="PlannerApp.addStickyNote('pink')">+ Pushti</button>
+              </div>
+            </div>
+            <div class="sticky-board-grid" id="stickyNotesBoard">
+              <!-- Dynamic sticky notes -->
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ========================================================
+         TAB 1: VAZIFALAR NAZORATI
+         ======================================================== -->
+    <section id="tab-tasks" class="tab-pane">
+      <!-- HEADER BANNER (Peach & Green) -->
+      <div class="task-header-banner">
+        <div class="task-banner-left">
+          <span>Vazifalar nazorati</span>
+        </div>
+        <div class="task-banner-right">
+          <div class="date-title">Bugungi sana</div>
+          <div class="date-value" id="currentFullDateText">Dushanba, 19-Oktyabr 2026</div>
+        </div>
+      </div>
+
+      <!-- VIEW TOGGLE (TABLE VS KANBAN) -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <!-- QUICK FILTER PILLS (NEW FEATURE) -->
+        <div class="filter-pills-bar" style="margin-bottom: 0;">
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-right: 4px;">Filtr:</span>
+          <div class="filter-pill active" data-filter="all">Barchasi (<span id="pillCountAll">0</span>)</div>
+          <div class="filter-pill" data-filter="pending">⏳ Jarayonda / Kutilmoqda (<span id="pillCountPending">0</span>)</div>
+          <div class="filter-pill" data-filter="completed">✅ Bajarilganlar (<span id="pillCountCompleted">0</span>)</div>
+          <div class="filter-pill" data-filter="urgent">‼️ O'ta muhim (<span id="pillCountUrgent">0</span>)</div>
+          <div class="filter-pill" data-filter="today">📅 Bugungi vazifalar (<span id="pillCountToday">0</span>)</div>
+        </div>
+
+        <div class="view-toggle-bar" style="margin-bottom: 0;">
+          <button class="view-btn active" id="btnViewTable" onclick="PlannerApp.switchTaskView('table')">📋 Jadval</button>
+          <button class="view-btn" id="btnViewKanban" onclick="PlannerApp.switchTaskView('kanban')">📌 Kanban Doskasi</button>
+          <button class="view-btn" id="btnViewMatrix" onclick="PlannerApp.switchTaskView('matrix')">🎯 Eisenhower Matritsasi (TickTick)</button>
+        </div>
+      </div>
+
+      <!-- VIEW 1: TASK TABLE -->
+      <div id="tasksTableViewContainer">
+        <div class="table-title-box">Vazifalar ro'yxati</div>
+        <div class="task-table-container">
+          <table class="planner-table" id="tasksTable">
+            <thead>
+              <tr>
+                <th class="checkbox-col">✓</th>
+                <th style="min-width: 320px;">Vazifa nomi</th>
+                <th style="width: 140px;">Muddati</th>
+                <th style="width: 150px;">Prioritet</th>
+                <th style="width: 140px;">Status</th>
+                <th style="width: 130px;">Kategoriya</th>
+                <th>Izoh / Eslatma</th>
+                <th style="width: 70px; text-align: center;">Amal</th>
+              </tr>
+            </thead>
+            <tbody id="tasksTbody">
+              <!-- Dynamic tasks rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- VIEW 2: KANBAN BOARD (NOTION / LINEAR STYLE) -->
+      <div id="tasksKanbanViewContainer" style="display: none;">
+        <div class="kanban-board">
+          <!-- Column 1: Kutilmoqda -->
+          <div class="kanban-col pending" ondragover="event.preventDefault()" ondrop="PlannerApp.handleKanbanDrop(event, '⏳ Kutilmoqda')">
+            <div class="kanban-col-header">
+              <span>⏳ KUTILMOQDA</span>
+              <span class="trend-pill" id="kanbanCountPending" style="background:#fef7e0; color:#b06000;">0</span>
+            </div>
+            <div class="kanban-card-list" id="kanbanListPending"></div>
+          </div>
+
+          <!-- Column 2: Jarayonda -->
+          <div class="kanban-col progress" ondragover="event.preventDefault()" ondrop="PlannerApp.handleKanbanDrop(event, '✏️ Jarayonda')">
+            <div class="kanban-col-header">
+              <span>✏️ JARAYONDA</span>
+              <span class="trend-pill" id="kanbanCountProgress" style="background:#e8f0fe; color:#1967d2;">0</span>
+            </div>
+            <div class="kanban-card-list" id="kanbanListProgress"></div>
+          </div>
+
+          <!-- Column 3: Bajarildi -->
+          <div class="kanban-col done" ondragover="event.preventDefault()" ondrop="PlannerApp.handleKanbanDrop(event, '✅ Bajarildi')">
+            <div class="kanban-col-header">
+              <span>✅ BAJARILDI</span>
+              <span class="trend-pill" id="kanbanCountDone" style="background:#e6f4ea; color:#137333;">0</span>
+            </div>
+            <div class="kanban-card-list" id="kanbanListDone"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: EISENHOWER MATRIX (TICKTICK / COVEY 4 QUADRANTS) -->
+      <div id="tasksMatrixViewContainer" style="display: none;">
+        <div style="margin-bottom: 10px; font-size: 13px; color: var(--text-muted); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <span>Prioritet va shoshilinchlik bo'yicha 4 kvadrantli tahlil:</span>
+          <span style="font-size:11px; background:var(--header-green-light); padding:3px 8px; border-radius:4px; color:#137333;">💡 Maslahat: Eng katta yutuqlar 2-kvadrantda (Strategik reja) yaratiladi!</span>
+        </div>
+        <div class="matrix-grid">
+          <!-- Q1: Shoshilinch & Muhim -->
+          <div class="matrix-quadrant matrix-q1">
+            <div class="matrix-q-header">
+              <div>
+                <span>🔴 1-KVADRANT: Shoshilinch & Muhim (Do First)</span>
+                <div class="matrix-q-subtitle">Darhol bajarish kerak bo'lgan vazifalar</div>
+              </div>
+              <span class="trend-pill" id="matrixCountQ1" style="background:#fce8e6; color:#c5221f;">0</span>
+            </div>
+            <div class="matrix-task-list" id="matrixListQ1"></div>
+          </div>
+
+          <!-- Q2: Muhim, ammo Shoshilinch emas -->
+          <div class="matrix-quadrant matrix-q2">
+            <div class="matrix-q-header">
+              <div>
+                <span>🔵 2-KVADRANT: Muhim, Shoshilinch Emas (Schedule)</span>
+                <div class="matrix-q-subtitle">Strategik o'sish, ta'lim, reja va rivojlanish</div>
+              </div>
+              <span class="trend-pill" id="matrixCountQ2" style="background:#e8f0fe; color:#1a73e8;">0</span>
+            </div>
+            <div class="matrix-task-list" id="matrixListQ2"></div>
+          </div>
+
+          <!-- Q3: Shoshilinch, lekin Muhim emas -->
+          <div class="matrix-quadrant matrix-q3">
+            <div class="matrix-q-header">
+              <div>
+                <span>🟡 3-KVADRANT: Shoshilinch, Muhim Emas (Delegate)</span>
+                <div class="matrix-q-subtitle">Tezkor topshiriqlar, mayda yumushlar</div>
+              </div>
+              <span class="trend-pill" id="matrixCountQ3" style="background:#fef7e0; color:#b06000;">0</span>
+            </div>
+            <div class="matrix-task-list" id="matrixListQ3"></div>
+          </div>
+
+          <!-- Q4: Shoshilinch ham emas, Muhim ham emas -->
+          <div class="matrix-quadrant matrix-q4">
+            <div class="matrix-q-header">
+              <div>
+                <span>⚪ 4-KVADRANT: Muhim Emas, Shoshilinch Emas (Eliminate)</span>
+                <div class="matrix-q-subtitle">Chalg'ituvchi, ikkilamchi va vaqt o'g'irlaydigan ishlar</div>
+              </div>
+              <span class="trend-pill" id="matrixCountQ4" style="background:#f1f3f4; color:#5f6368;">0</span>
+            </div>
+            <div class="matrix-task-list" id="matrixListQ4"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-success" id="btnOpenAddTask">➕ Yangi vazifa qo'shish</button>
+        <button class="btn btn-secondary" id="btnDownloadTasksCsv">📥 Faqat Vazifalar CSV sini olish</button>
+        <span style="font-size: 13px; color: #5f6368; margin-left: auto;">
+          Jami: <b id="taskCountTotal">0</b> | Bajarildi: <b id="taskCountDone" style="color: #137333;">0</b> (<span id="taskPercentDone">0%</span>)
+        </span>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 2: KALENDAR (CALENDAR VIEW)
+         ======================================================== -->
+    <section id="tab-calendar" class="tab-pane">
+      <!-- CALENDAR PEACH BANNER (EXACT AS SCREENSHOT 2) -->
+      <div style="background: var(--header-peach); border-radius: 4px; padding: 14px 20px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 24px;">
+          <h2 style="font-size: 24px; font-weight: 700; margin: 0;">Kalendar</h2>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>Oy:</span>
+              <select id="calMonthDropdown" style="background: transparent; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 13px; outline: none;">
+                <option value="0" style="color:#333;">Yanvar</option>
+                <option value="1" style="color:#333;">Fevral</option>
+                <option value="2" style="color:#333;">Mart</option>
+                <option value="3" style="color:#333;">Aprel</option>
+                <option value="4" style="color:#333;">May</option>
+                <option value="5" style="color:#333;">Iyun</option>
+                <option value="6" style="color:#333;">Iyul</option>
+                <option value="7" style="color:#333;">Avgust</option>
+                <option value="8" style="color:#333;">Sentyabr</option>
+                <option value="9" style="color:#333;">Oktyabr</option>
+                <option value="10" selected style="color:#333;">Noyabr</option>
+                <option value="11" style="color:#333;">Dekabr</option>
+              </select>
+            </div>
+            <div style="background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>Yil:</span>
+              <select id="calYearDropdown" style="background: transparent; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 13px; outline: none;">
+                <option value="2025" style="color:#333;">2025</option>
+                <option value="2026" selected style="color:#333;">2026</option>
+                <option value="2027" style="color:#333;">2027</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: right; font-size: 13px;">
+          <div style="opacity: 0.9; font-size: 11px;">Bugungi sana</div>
+          <div style="font-weight: 600; font-size: 14px;" id="calTodayBannerText">Payshanba, 20-Noyabr</div>
+        </div>
+      </div>
+
+      <div class="calendar-layout">
+        <!-- LEFT: Tasks by Deadline (Google Sheets Table Style) -->
+        <div class="calendar-sidebar-left" style="background: #ffffff; padding: 0; overflow: hidden;">
+          <div style="background: #fdf1ed; padding: 8px 12px; font-weight: 700; font-size: 13px; color: #5c342c; border-bottom: 1px solid #f2ded9; text-align: center;">
+            Vazifalar
+          </div>
+          <div style="max-height: 520px; overflow-y: auto;">
+            <table class="planner-table" style="font-size: 11px;">
+              <thead>
+                <tr>
+                  <th style="width: 24px; text-align: center;">✓</th>
+                  <th>Vazifa nomi</th>
+                  <th style="width: 85px;">Muddati</th>
+                </tr>
+              </thead>
+              <tbody id="calendarTasksTableBody">
+                <!-- Injected by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CENTER: Calendar Grid -->
+        <div class="calendar-main-view" style="padding: 0; border: none;">
+          <div style="background: #fdf1ed; padding: 8px 12px; border: 1px solid #f2ded9; border-bottom: none; display: flex; justify-content: space-between; align-items: center;">
+            <button class="btn btn-secondary" id="btnPrevMonth" style="padding: 2px 8px; font-size: 11px;">◀ Oldingi</button>
+            <span id="calendarMonthYearTitle" style="font-size: 14px; font-weight: 700; color: #5c342c;">noyabr 2026</span>
+            <button class="btn btn-secondary" id="btnNextMonth" style="padding: 2px 8px; font-size: 11px;">Keyingi ▶</button>
+          </div>
+          <div class="calendar-grid" id="calendarDaysGrid">
+            <!-- Week headers & Days generated in JS -->
+          </div>
+        </div>
+
+        <!-- RIGHT: Monthly Tasks / Ejemesyachnie zadachi (Screenshot 2) -->
+        <div class="calendar-sidebar-right" style="background: #ffffff; padding: 0; overflow: hidden;">
+          <div style="background: #a3b18a; color: white; padding: 8px 12px; font-weight: 700; font-size: 12px; text-align: center; text-transform: uppercase;">
+            Oylik Vazifalar
+          </div>
+          <div style="max-height: 520px; overflow-y: auto;">
+            <table class="planner-table" style="font-size: 11px;">
+              <thead>
+                <tr style="background: #f4f6f0;">
+                  <th>Vazifa</th>
+                  <th style="width: 70px;">Muddat</th>
+                </tr>
+              </thead>
+              <tbody id="calMonthlyGoalsTbody">
+                <tr><td>Loyihani to'liq topshirish</td><td style="color:#5f6368;">15-noyabr</td></tr>
+                <tr><td>Kontrakt to'lovlarini yopish</td><td style="color:#5f6368;">22-noyabr</td></tr>
+                <tr><td>Jamg'armani 15% ga oshirish</td><td style="color:#5f6368;">30-noyabr</td></tr>
+                <tr><td>Arenda masalasini hal qilish</td><td style="color:#5f6368;">25-noyabr</td></tr>
+                <tr><td>Imtihonlarga tayyorgarlik</td><td style="color:#5f6368;">28-noyabr</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 3: ODATLAR PLANNERI (HABIT TRACKER)
+         ======================================================== -->
+    <section id="tab-habits" class="tab-pane">
+      <div class="habit-top-summary">
+        <div>
+          <div class="habit-month-title" id="habitSelectedMonthName">Fevral</div>
+          <div style="margin-top: 6px; display: flex; gap: 6px;" id="habitMonthsSelector">
+            <!-- Month pills generated via JS -->
+          </div>
+        </div>
+        <div class="habit-kpis">
+          <div class="kpi-unit">
+            <div class="kpi-label">Odatlar soni</div>
+            <div class="kpi-val" id="habitTotalCount">8</div>
+          </div>
+          <div class="kpi-unit">
+            <div class="kpi-label">Bajarilgan odatlar</div>
+            <div class="kpi-val" id="habitCompletedCount" style="color: #137333;">151</div>
+          </div>
+          <div class="kpi-unit">
+            <div class="kpi-label">Oylik Progres</div>
+            <div class="habit-progress-bar-container">
+              <div class="habit-progress-bar-fill" id="habitProgressFill"></div>
+            </div>
+          </div>
+          <div class="kpi-unit">
+            <div class="kpi-label">Progres %</div>
+            <div class="kpi-val" id="habitProgressPercent" style="color: #c5221f;">38,04%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUGUNGI KUNDALIK ODATLAR CHECKLISTI (TODAY'S HABIT ROUTINE) -->
+      <div class="today-habits-panel">
+        <div class="today-habits-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">🎯</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">
+              Bugungi Odatlar Nazorati: <b id="todayHabitsDateLabel" style="color: var(--header-peach);">...</b>
+            </span>
+            <span class="trend-pill" id="todayHabitsStatsBadge" style="background:#e8f0fe; color:#1a73e8;">0/0 bajarildi</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted);">Bugungi bajarilgan odatlarni to'g'ridan-to'g'ri belgilang</span>
+        </div>
+        <div class="today-habits-grid" id="todayHabitsGrid">
+          <!-- Dynamically generated today cards -->
+        </div>
+      </div>
+
+      <!-- HABIT FREQUENCY & ROUTINE FILTERS -->
+      <div class="habit-filter-bar">
+        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-right: 4px;">Saralash:</span>
+        <button class="habit-filter-pill active" data-freq="all">Hammasi</button>
+        <button class="habit-filter-pill" data-freq="daily">📅 Kunlik (Daily)</button>
+        <button class="habit-filter-pill" data-freq="weekly">⚡ Haftalik (Weekly)</button>
+        <button class="habit-filter-pill" data-freq="monthly">🔄 Davomiy / Oylik (Recurring)</button>
+
+        <span style="color: var(--border-sheet); margin: 0 4px;">|</span>
+        <button class="habit-filter-pill routine-filter active" data-routine="all" style="font-size: 11px;">Barcha vaqtlar</button>
+        <button class="habit-filter-pill routine-filter" data-routine="morning" style="font-size: 11px;">🌅 Ertalab</button>
+        <button class="habit-filter-pill routine-filter" data-routine="day" style="font-size: 11px;">☀️ Kunduzi</button>
+        <button class="habit-filter-pill routine-filter" data-routine="evening" style="font-size: 11px;">🌙 Kechqurun</button>
+      </div>
+
+      <!-- HABIT MATRIX -->
+      <div class="habit-table-scroll">
+        <table class="habit-matrix" id="habitMatrixTable">
+          <thead>
+            <tr id="habitHeaderWeeks">
+              <th class="habit-name-col">Kundalik vazifalar / Odatlar</th>
+              <th colspan="7" class="week-h-1">Hafta 1</th>
+              <th colspan="7" class="week-h-2">Hafta 2</th>
+              <th colspan="7" class="week-h-3">Hafta 3</th>
+              <th colspan="7" class="week-h-4">Hafta 4</th>
+              <th colspan="3" style="background:#e0e0e0;">Qolgan</th>
+              <th style="min-width: 60px; background: #fae1dd;">Maqsad</th>
+              <th style="min-width: 50px; background: #fae1dd;">Jami</th>
+              <th style="min-width: 60px; background: #fae1dd;">Progres</th>
+              <th style="width: 40px; background: #fae1dd;">Amal</th>
+            </tr>
+            <tr id="habitHeaderDays">
+              <th class="habit-name-col" style="font-size: 11px; color:#5f6368;" id="habitTodayIndicator">kunlar</th>
+              <!-- 1 to 31 injected -->
+            </tr>
+          </thead>
+          <tbody id="habitTableBody">
+            <!-- Dynamic habit rows -->
+          </tbody>
+          <tfoot>
+            <tr id="habitRowPercent">
+              <td class="habit-name-col" style="font-weight: 700; background: #fae1dd;">Progres %</td>
+              <!-- Injected per-day percent -->
+            </tr>
+            <tr id="habitRowFilled">
+              <td class="habit-name-col" style="background: #fdf5f3;">To'ldirilgan</td>
+              <!-- Injected count filled -->
+            </tr>
+            <tr id="habitRowUnfilled">
+              <td class="habit-name-col" style="background: #fdf5f3;">To'ldirilmagan</td>
+              <!-- Injected count unfilled -->
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="action-row" style="margin-bottom: 16px;">
+        <button class="btn btn-success" id="btnOpenAddHabit">➕ Yangi odat qo'shish</button>
+        <button class="btn btn-secondary" id="btnDownloadHabitsCsv">📥 Odatlar CSV sini olish</button>
+      </div>
+
+      <!-- HABIT LINE / AREA CHART -->
+      <div class="habit-chart-card">
+        <h4 style="font-size: 13px; font-weight: 600; color: #5f6368; margin-bottom: 10px;">Kunlik bajarilish ko'rsatkichi dinamikasi</h4>
+        <div style="height: 180px; position: relative;">
+          <canvas id="habitChartCanvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 4: MOLIYA REJASI (OYLIK FIN PLAN)
+         ======================================================== -->
+    <section id="tab-finance-month" class="tab-pane">
+      <!-- FILTERS & SETTINGS -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #fdfaf8; padding: 10px 16px; border: 1px solid #f2ded9; border-radius: 4px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <span style="font-weight: 600; font-size: 13px; color: #5c342c;">Valyuta: <b>UZS (so'm)</b></span>
+          <span style="font-weight: 600; font-size: 13px; color: #5c342c;">Yil: 
+            <select id="finYearSelect" class="form-control" style="display:inline; width:90px;">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+            </select>
+          </span>
+          <span style="font-weight: 600; font-size: 13px; color: #5c342c;">Oy: 
+            <select id="finMonthSelect" class="form-control" style="display:inline; width:130px;">
+              <option value="01">Yanvar</option>
+              <option value="02">Fevral</option>
+              <option value="03">Mart</option>
+              <option value="04">Aprel</option>
+              <option value="05">May</option>
+              <option value="06">Iyun</option>
+              <option value="07">Iyul</option>
+              <option value="08">Avgust</option>
+              <option value="09">Sentyabr</option>
+              <option value="10">Oktyabr</option>
+              <option value="11">Noyabr</option>
+              <option value="12">Dekabr</option>
+            </select>
+          </span>
+          <span style="font-size: 12px; color: #1557b0; background: #e8f0fe; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #d2e3fc;">
+            💵 1 USD = 
+            <input type="number" id="usdRateInput" value="12035" step="1" style="width: 65px; border: 1px solid #aecbfa; border-radius: 3px; padding: 1px 4px; font-weight: bold; font-size: 12px; color: #1a73e8; background: white; text-align: center;"> 
+            UZS
+          </span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" id="btnDownloadFinCsv">📥 Moliya CSV sini olish</button>
+        </div>
+      </div>
+
+      <!-- SMART FINANCIAL ADVISOR (NEW FEATURE) -->
+      <div class="fin-tip-box" id="finSmartAdvisorBox">
+        <span style="font-size: 24px;">💡</span>
+        <div style="flex: 1;">
+          <b id="finAdvisorTitle">Moliyaviy Tahlilchi:</b>
+          <span id="finAdvisorMessage">Tranzaksiyalar hisoblanmoqda...</span>
+        </div>
+      </div>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="fin-kpi-bar">
+        <div class="fin-kpi-card peach">
+          <div class="fin-kpi-title">🏦 Jamg'arma (Накопления)</div>
+          <div class="fin-kpi-val" id="kpiSavings">0 UZS</div>
+          <div style="font-size: 11px; color: #70757a; margin-top: 2px;" id="kpiSavingsUsd">≈ $0 USD</div>
+        </div>
+        <div class="fin-kpi-card green">
+          <div class="fin-kpi-title">💰 Tushumlar (Поступления)</div>
+          <div class="fin-kpi-val" id="kpiIncome" style="color: #137333;">0 UZS</div>
+          <div style="font-size: 11px; color: #137333; opacity: 0.8; margin-top: 2px;" id="kpiIncomeUsd">≈ $0 USD</div>
+        </div>
+        <div class="fin-kpi-card yellow">
+          <div class="fin-kpi-title">📊 Tushumdan sarflangan foiz</div>
+          <div class="fin-kpi-val" id="kpiSpentPercent">0%</div>
+          <div style="height: 6px; background: #e0e0e0; border-radius: 3px; margin-top: 6px; overflow: hidden;">
+            <div id="kpiSpentBar" style="height: 100%; width: 0%; background: #ea4335;"></div>
+          </div>
+        </div>
+        <div class="fin-kpi-card peach">
+          <div class="fin-kpi-title">💸 Xarajatlar (Расходы)</div>
+          <div class="fin-kpi-val" id="kpiExpenses" style="color: #c5221f;">0 UZS</div>
+          <div style="font-size: 11px; color: #c5221f; opacity: 0.8; margin-top: 2px;" id="kpiExpensesUsd">≈ $0 USD</div>
+        </div>
+      </div>
+
+      <!-- 50 / 30 / 20 RULE COMPLIANCE ANALYZER (BENCHMARK BEST PRACTICE) -->
+      <div class="budget-rule-box">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+            ⚖️ 50 / 30 / 20 Oltin Moliyaviy Qoidasi Tahlili
+          </h3>
+          <span style="font-size: 11px; color: var(--text-muted);">Jahon moliyaviy standarti bo'yicha taqsimot</span>
+        </div>
+        <div class="budget-rule-grid">
+          <!-- 50% Needs -->
+          <div class="budget-rule-card">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600;">
+              <span>🏠 Zaruriy Ehtiyojlar (50% max)</span>
+              <b id="ruleNeedsPercent">0%</b>
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: #1557b0; margin-top: 4px;" id="ruleNeedsAmount">0 UZS</div>
+            <div class="budget-rule-bar">
+              <div class="budget-rule-fill" id="ruleNeedsBar" style="width: 0%; background: #1a73e8;"></div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 6px;" id="ruleNeedsStatus">Me'yorda</div>
+          </div>
+
+          <!-- 30% Wants -->
+          <div class="budget-rule-card">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600;">
+              <span>🎮 Xohishlar & Qulaylik (30% max)</span>
+              <b id="ruleWantsPercent">0%</b>
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: #b06000; margin-top: 4px;" id="ruleWantsAmount">0 UZS</div>
+            <div class="budget-rule-bar">
+              <div class="budget-rule-fill" id="ruleWantsBar" style="width: 0%; background: #fbbc04;"></div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 6px;" id="ruleWantsStatus">Me'yorda</div>
+          </div>
+
+          <!-- 20% Savings -->
+          <div class="budget-rule-card">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600;">
+              <span>🏦 Jamg'arma & Investitsiya (20% min)</span>
+              <b id="ruleSavingsPercent">0%</b>
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: #137333; margin-top: 4px;" id="ruleSavingsAmount">0 UZS</div>
+            <div class="budget-rule-bar">
+              <div class="budget-rule-fill" id="ruleSavingsBar" style="width: 0%; background: #34a853;"></div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 6px;" id="ruleSavingsStatus">Me'yorda</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHARTS ROW -->
+      <div class="fin-charts-row">
+        <div class="fin-chart-box">
+          <h3>📊 Plan / Fakt (Tushum vs Xarajat)</h3>
+          <div style="height: 200px;">
+            <canvas id="finBarChart"></canvas>
+          </div>
+        </div>
+        <div class="fin-chart-box">
+          <h3>🥧 Tushum va xarajatlar ulushi</h3>
+          <div style="height: 200px;">
+            <canvas id="finPieSummaryChart"></canvas>
+          </div>
+        </div>
+        <div class="fin-chart-box">
+          <h3>📈 Kategoriyalar bo'yicha xarajatlar</h3>
+          <div style="height: 200px;">
+            <canvas id="finCategoryPieChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUMMARY BY CATEGORY CARDS -->
+      <div class="fin-tables-grid">
+        <div class="fin-cat-table payments">
+          <h4>To'lovlar</h4>
+          <div class="fin-cat-items" id="finBoxPayments"></div>
+        </div>
+        <div class="fin-cat-table expenses">
+          <h4>Xarajatlar</h4>
+          <div class="fin-cat-items" id="finBoxExpenses"></div>
+        </div>
+        <div class="fin-cat-table debts">
+          <h4>Qarzlar</h4>
+          <div class="fin-cat-items" id="finBoxDebts"></div>
+        </div>
+        <div class="fin-cat-table income">
+          <h4>Tushumlar</h4>
+          <div class="fin-cat-items" id="finBoxIncome"></div>
+        </div>
+        <div class="fin-cat-table savings">
+          <h4>Jamg'arma</h4>
+          <div class="fin-cat-items" id="finBoxSavings"></div>
+        </div>
+      </div>
+
+      <!-- CATEGORY BUDGET LIMITS & OVERSPEND MONITOR -->
+      <div class="subscriptions-box" style="margin-top: 16px;">
+        <div class="subscriptions-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">
+              ⚠️ Oylik Kategoriya Byudjet Limitlari & Nazorat (Budget Limits & Alert Meters)
+            </h3>
+            <span style="font-size: 11px; color: var(--text-muted);">Xarajat chegaralarini belgilang va ortiqcha sarfning oldini oling</span>
+          </div>
+          <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="PlannerApp.openAddBudgetLimitPrompt()">+ Limit belgilash</button>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="budget-limits-table" id="budgetLimitsTable">
+            <thead>
+              <tr>
+                <th style="width: 180px;">Kategoriya</th>
+                <th style="width: 140px;">Belgilangan Limit</th>
+                <th style="width: 140px;">Sarflangan</th>
+                <th>Sarf darajasi (Meter)</th>
+                <th style="width: 140px;">Qoldiq / Holat</th>
+                <th style="width: 40px; text-align: center;">✕</th>
+              </tr>
+            </thead>
+            <tbody id="budgetLimitsTbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RECURRING SUBSCRIPTIONS & OBLIGATIONS (BENCHMARK BEST PRACTICE) -->
+      <div class="subscriptions-box">
+        <div class="subscriptions-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">
+              📅 Doimiy Obunalar & Majburiy To'lovlar (Subscriptions & Fixed Bills)
+            </h3>
+            <span style="font-size: 11px; color: var(--text-muted);">(Internet, Aloqa, Ijara, Obunalar)</span>
+          </div>
+          <div class="subscriptions-total-badge" id="subTotalBadge">
+            Oylik jami: 0 UZS
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="planner-table" style="font-size: 12px; margin-bottom: 8px;">
+            <thead>
+              <tr>
+                <th style="width: 30px; text-align: center;">Holati</th>
+                <th>Xizmat / To'lov nomi</th>
+                <th style="width: 140px;">Kategoriya</th>
+                <th style="width: 130px;">Oylik summa</th>
+                <th style="width: 110px;">To'lov kuni</th>
+                <th style="width: 50px; text-align: center;">O'chirish</th>
+              </tr>
+            </thead>
+            <tbody id="subscriptionsTbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Quick inline add for subscription -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 4px; border: 1px dashed var(--border-sheet);">
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">+ Yangi doimiy to'lov:</span>
+          <input type="text" id="subInputName" class="form-control" placeholder="Xizmat nomi (masalan: Uy interneti)" style="flex: 2; min-width: 160px;">
+          <select id="subInputCategory" class="form-control" style="flex: 1; min-width: 120px;">
+            <option value="Mobil Aloqa">Mobil Aloqa</option>
+            <option value="Kommunalka">Kommunalka</option>
+            <option value="Uy-joy">Uy-joy / Ijara</option>
+            <option value="Ta'lim">Ta'lim / Kurslar</option>
+            <option value="Salomatlik">Salomatlik / Sport</option>
+            <option value="Obuna">Dasturiy ta'minot / Obuna</option>
+          </select>
+          <input type="number" id="subInputAmount" class="form-control" placeholder="Summa (UZS)" style="width: 120px;">
+          <input type="number" id="subInputDueDay" class="form-control" placeholder="Har oy kuni (1-31)" min="1" max="31" style="width: 110px;">
+          <button class="btn btn-primary" style="padding: 4px 12px;" onclick="PlannerApp.addSubscription()">+ Qo'shish</button>
+        </div>
+      </div>
+
+      <!-- TRANSACTIONS ENTRY FORM & LIST -->
+      <div style="background: #ea4335; color: white; padding: 4px 12px; font-size: 11px; font-weight: bold; text-align: center; border-radius: 2px; margin-top: 16px;">
+        KUNDALIK TRANZAKSIYALARNI KIRITISH (XARAJATLAR VA TUSHUMLAR)
+      </div>
+
+      <div class="transactions-section">
+        <!-- Daily Expenses -->
+        <div class="tx-box">
+          <h3 style="color: #c5221f;">📉 Kundalik xarajatlar (Ежедневные траты)</h3>
+          <form id="expenseForm" class="tx-form">
+            <input type="date" id="expDate" class="form-control" required>
+            <select id="expCategory" class="form-control" required>
+              <option value="Mobil Aloqa">Mobil Aloqa</option>
+              <option value="Kommunalka">Kommunalka</option>
+              <option value="Benzin">Benzin</option>
+              <option value="Oila xarajatlari">Oila xarajatlari</option>
+              <option value="Sigaretlar">Sigaretlar</option>
+              <option value="Ko'ngilochar va dam olish">Ko'ngilochar</option>
+              <option value="Ta'lim va rivojlanish">Ta'lim</option>
+              <option value="Boshqa xarajat">Boshqa xarajat</option>
+            </select>
+            <input type="number" id="expAmount" placeholder="Summa (so'm)" class="form-control" required>
+            <input type="text" id="expNote" placeholder="Izoh..." class="form-control">
+            <button type="submit" class="btn btn-primary" style="background:#ea4335; border:none;">+ Qo'shish</button>
+          </form>
+
+          <table class="planner-table" style="font-size: 12px;">
+            <thead>
+              <tr>
+                <th>Sana</th>
+                <th>Kategoriya</th>
+                <th>Summa</th>
+                <th>Izoh</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="expensesTbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Daily Income -->
+        <div class="tx-box">
+          <h3 style="color: #137333;">📈 Kundalik tushumlar (Ежедневные поступления)</h3>
+          <form id="incomeForm" class="tx-form">
+            <input type="date" id="incDate" class="form-control" required>
+            <select id="incCategory" class="form-control" required>
+              <option value="Ish haqi (Maosh)">Ish haqi (Maosh)</option>
+              <option value="Frilans">Frilans</option>
+              <option value="Biznes / Dividendlar">Biznes / Dividend</option>
+              <option value="Ko'chmas mulkdan tushum">Arenda / Ijara</option>
+              <option value="Investitsiyalar & Jamg'armalar">Investitsiya</option>
+              <option value="Boshqa tushumlar">Boshqa tushum</option>
+            </select>
+            <input type="number" id="incAmount" placeholder="Summa (so'm)" class="form-control" required>
+            <input type="text" id="incNote" placeholder="Izoh..." class="form-control">
+            <button type="submit" class="btn btn-success" style="border:none;">+ Qo'shish</button>
+          </form>
+
+          <table class="planner-table" style="font-size: 12px;">
+            <thead>
+              <tr>
+                <th>Sana</th>
+                <th>Kategoriya</th>
+                <th>Summa</th>
+                <th>Izoh</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="incomesTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 5: MOLIYA REJASI (YILLIK FIN PLAN)
+         ======================================================== -->
+    <section id="tab-finance-year" class="tab-pane">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 20px; font-weight: 700; color: #202124;">2026-Yil Moliya Konsolidatsiyasi (Yillik hisobot)</h2>
+        <span style="font-size: 13px; color: #5f6368;">Barcha 12 oy sarhisobi</span>
+      </div>
+
+      <div class="fin-kpi-bar">
+        <div class="fin-kpi-card green">
+          <div class="fin-kpi-title">💰 Yillik Jami Tushum</div>
+          <div class="fin-kpi-val" id="yearTotalIncome" style="color:#137333;">0 UZS</div>
+        </div>
+        <div class="fin-kpi-card peach">
+          <div class="fin-kpi-title">💸 Yillik Jami Xarajat</div>
+          <div class="fin-kpi-val" id="yearTotalExpense" style="color:#c5221f;">0 UZS</div>
+        </div>
+        <div class="fin-kpi-card yellow">
+          <div class="fin-kpi-title">🏦 Yillik Sof Jamg'arma</div>
+          <div class="fin-kpi-val" id="yearTotalSavings" style="color:#1a73e8;">0 UZS</div>
+        </div>
+      </div>
+
+      <div class="task-table-container">
+        <table class="planner-table" style="text-align: right;">
+          <thead>
+            <tr>
+              <th style="text-align: left;">Oy</th>
+              <th>To'lovlar</th>
+              <th>Xarajatlar</th>
+              <th>Qarzlar</th>
+              <th>Tushumlar</th>
+              <th>Oy Qoldig'i (Jamg'arma)</th>
+            </tr>
+          </thead>
+          <tbody id="yearSummaryTbody">
+            <!-- 12 months rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="habit-chart-card" style="margin-top: 20px;">
+        <h4 style="font-size: 14px; font-weight: 600; color: #3c4043; margin-bottom: 12px;">Yil davomida daromad va xarajatlar dinamikasi</h4>
+        <div style="height: 240px;">
+          <canvas id="yearBarChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 6: MOLIYA ROADMAP & SOF BOYLIK (NET WORTH & 7 BABY STEPS)
+         ======================================================== -->
+    <section id="tab-finance-roadmap" class="tab-pane">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="font-size: 22px; font-weight: 800; color: var(--text-main); margin: 0;">🗺️ Shaxsiy Moliya Yo'l Xaritasi & Sof Boylik (Roadmap & Net Worth)</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">Dave Ramsey 7 Qadam tizimi, Sof Boylik (Net Worth) va Favqulodda Xavfsizlik Zahirasi</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" onclick="PlannerApp.openAddNetWorthItemPrompt('asset')">+ Aktiv qo'shish</button>
+          <button class="btn btn-secondary" onclick="PlannerApp.openAddNetWorthItemPrompt('liability')">+ Majburiyat qo'shish</button>
+        </div>
+      </div>
+
+      <!-- TOP METRICS: NET WORTH, EMERGENCY RUNWAY, CURRENT STAGE -->
+      <div class="networth-grid">
+        <!-- Card 1: Sof Boylik (Net Worth) -->
+        <div class="networth-stat-card">
+          <div class="networth-stat-title">🏛️ Sof Boylik (Net Worth)</div>
+          <div class="networth-stat-val" id="nwTotalNetWorth" style="color: #1a73e8;">0 UZS</div>
+          <div class="networth-stat-sub">
+            Aktivlar: <b id="nwTotalAssetsVal" style="color: #137333;">0 UZS</b> | Majburiyatlar: <b id="nwTotalLiabVal" style="color: #c5221f;">0 UZS</b>
+          </div>
+        </div>
+
+        <!-- Card 2: Favqulodda Zaxira (Runway) -->
+        <div class="networth-stat-card">
+          <div class="networth-stat-title">🛡️ Xavfsizlik Yostig'i (Survival Runway)</div>
+          <div class="networth-stat-val" id="nwRunwayMonths" style="color: #137333;">0.0 oy</div>
+          <div class="networth-stat-sub" id="nwRunwayDesc">
+            Daromad to'xtasa ham yashash mumkin bo'lgan muddat
+          </div>
+        </div>
+
+        <!-- Card 3: Joriy Roadmap Bosqichi -->
+        <div class="networth-stat-card">
+          <div class="networth-stat-title">🚩 Hozirgi Moliyaviy Bosqich</div>
+          <div class="networth-stat-val" id="nwCurrentStageName" style="font-size: 18px; color: #b06000; margin-top: 8px;">3-Qadam: Xavfsizlik Yostig'i</div>
+          <div class="networth-stat-sub">
+            7 ta bosqichdan 3-bosqichda harakatdasiz
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 1: DAVE RAMSEY'S 7 BABY STEPS ROADMAP -->
+      <div class="dash-widget" style="margin-bottom: 20px;">
+        <div class="dash-widget-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🏆</span>
+            <div>
+              <h3 style="margin: 0;">Dave Ramsey: 7 Moliyaviy Qadam Yo'l Xaritasi (The 7 Baby Steps)</h3>
+              <span style="font-size: 11px; color: var(--text-muted);">Qarzdan qutulish va boylik yaratish bo'yicha dunyodagi #1 yo'l xaritasi</span>
+            </div>
+          </div>
+          <span class="trend-pill trend-up" id="nwRoadmapProgressBadge">0/7 Bajarildi</span>
+        </div>
+
+        <div class="roadmap-steps-list" id="roadmapStepsList">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </div>
+
+      <!-- SECTION 2: BALANCE SHEET (ASSETS VS LIABILITIES) -->
+      <div class="balance-sheet-grid">
+        <!-- Assets Table -->
+        <div class="dash-widget">
+          <div class="dash-widget-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">🟢</span>
+              <h3 style="margin: 0; color: #137333;">Aktivlar & Mablag'lar (Assets)</h3>
+            </div>
+            <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="PlannerApp.openAddNetWorthItemPrompt('asset')">+ Aktiv</button>
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Bankdagi hisoblar, naqd pul, omonat, mashina, ko'chmas mulk va investitsiyalar:</p>
+          <table class="planner-table" style="font-size: 12px;">
+            <thead>
+              <tr>
+                <th>Aktiv nomi</th>
+                <th>Kategoriya</th>
+                <th>Qiymati</th>
+                <th style="width: 40px; text-align: center;">✕</th>
+              </tr>
+            </thead>
+            <tbody id="nwAssetsTbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Liabilities Table -->
+        <div class="dash-widget">
+          <div class="dash-widget-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">🔴</span>
+              <h3 style="margin: 0; color: #c5221f;">Majburiyatlar & Qarzlar (Liabilities)</h3>
+            </div>
+            <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px;" onclick="PlannerApp.openAddNetWorthItemPrompt('liability')">+ Majburiyat</button>
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Kreditlar, do'stlardan qarzlar, to'lanmagan majburiyatlar va bo'lib to'lashlar:</p>
+          <table class="planner-table" style="font-size: 12px;">
+            <thead>
+              <tr>
+                <th>Majburiyat nomi</th>
+                <th>Kategoriya</th>
+                <th>Qoldiq qarz</th>
+                <th style="width: 40px; text-align: center;">✕</th>
+              </tr>
+            </thead>
+            <tbody id="nwLiabilitiesTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 7: CSV & SOZLAMALAR
+         ======================================================== -->
+    <section id="tab-settings" class="tab-pane">
+      <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #202124;">⚙️ Ma'lumotlar va CSV fayllari boshqaruvi</h2>
+      
+      <div class="csv-card">
+        <h3>1. CSV Fayllarni Yuklab Olish (Export)</h3>
+        <p>Barcha kiritilgan ma'lumotlar toza formatlangan CSV faylga eksport qilinadi. Excel yoki Google Sheets da oson ochiladi.</p>
+        <div class="csv-actions-grid">
+          <button class="btn btn-primary" onclick="PlannerApp.exportCsv('vazifalar')">📄 vazifalar.csv yuklab olish</button>
+          <button class="btn btn-primary" onclick="PlannerApp.exportCsv('odatlar')">📄 odatlar.csv yuklab olish</button>
+          <button class="btn btn-primary" onclick="PlannerApp.exportCsv('moliya')">📄 moliya.csv yuklab olish</button>
+          <button class="btn btn-primary" onclick="PlannerApp.exportCsv('obunalar')">📄 obunalar.csv yuklab olish</button>
+        </div>
+      </div>
+
+      <div class="csv-card">
+        <h3>2. CSV Fayldan Yuklash (Import)</h3>
+        <p>Kompyuteringizdagi tayyor CSV fayllarni dasturga yuklab yangilang:</p>
+        <div class="csv-actions-grid">
+          <label class="btn btn-secondary" style="cursor: pointer;">
+            📂 Vazifalar CSV ni yuklash
+            <input type="file" id="importTasksInput" accept=".csv" style="display: none;">
+          </label>
+          <label class="btn btn-secondary" style="cursor: pointer;">
+            📂 Odatlar CSV ni yuklash
+            <input type="file" id="importHabitsInput" accept=".csv" style="display: none;">
+          </label>
+          <label class="btn btn-secondary" style="cursor: pointer;">
+            📂 Moliya CSV ni yuklash
+            <input type="file" id="importFinInput" accept=".csv" style="display: none;">
+          </label>
+          <label class="btn btn-secondary" style="cursor: pointer;">
+            📂 Obunalar CSV ni yuklash
+            <input type="file" id="importSubInput" accept=".csv" style="display: none;">
+          </label>
+        </div>
+      </div>
+
+      <div class="csv-card">
+        <h3>3. Jonli Sinxronizatsiya & Ma'lumotlarni Boshqarish</h3>
+        <p>Hozirgi holat: <b id="settingsSyncStatus">Python Server yoki Brauzer LocalStorage</b>. Barcha kiritilayotgan va o'chirilayotgan o'zgarishlar darhol diskdagi CSV ga saqlanadi.</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-success" id="btnForceSaveAll">💾 Hammasini CSV ga saqlash</button>
+          <button class="btn btn-secondary" onclick="PlannerApp.clearAllData()" style="color: #ea4335; border-color: #f7c5c0;">
+            🗑️ Barcha ma'lumotlarni tozalash (Clear All)
+          </button>
+          <button class="btn btn-secondary" onclick="PlannerApp.resetDemoData()" style="color: #1a73e8;">
+            🔄 Namunaviy shablonni tiklash
+          </button>
+        </div>
+      </div>
+
+      <div class="csv-card">
+        <h3>4. To'liq Zaxira Nusxasi (Full JSON Backup & Restore)</h3>
+        <p>Barcha bo'limlar (vazifalar, odatlar, moliya tranzaksiyalari, obunalar) ni bitta faylda zaxiralash yoki zaxiradan to'liq qayta tiklash:</p>
+        <div class="csv-actions-grid">
+          <button class="btn btn-primary" onclick="PlannerApp.exportFullBackup()">
+            📦 Barcha ma'lumotlarni zaxiralash (JSON yuklab olish)
+          </button>
+          <label class="btn btn-secondary" style="cursor: pointer;">
+            📤 Zaxira faylini tiklash (JSON yuklash)
+            <input type="file" id="importJsonBackupInput" accept=".json" style="display: none;" onchange="PlannerApp.importFullBackup(event)">
+          </label>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM SHEET TABS BAR (GOOGLE SHEETS STYLE) -->
+  <footer class="bottom-tabs-bar">
+    <div style="font-size: 16px; margin-right: 12px; cursor: pointer; color: #5f6368;" title="Yangi varaq">+</div>
+    <div style="font-size: 14px; margin-right: 16px; cursor: pointer; color: #5f6368;" title="Barcha varaqlar">≡</div>
+    <div class="sheet-tabs-list" id="sheetTabsNav">
+      <div class="sheet-tab active" data-tab="tab-dashboard">📊 Dashboard</div>
+      <div class="sheet-tab" data-tab="tab-tasks">📋 Vazifalar nazorati</div>
+      <div class="sheet-tab" data-tab="tab-calendar">📅 Kalendar</div>
+      <div class="sheet-tab" data-tab="tab-habits">🔄 Odatlar planneri</div>
+      <div class="sheet-tab" data-tab="tab-finance-month">💳 Moliya rejasi (Oylik)</div>
+      <div class="sheet-tab" data-tab="tab-finance-year">📈 Moliya rejasi (Yillik)</div>
+      <div class="sheet-tab" data-tab="tab-finance-roadmap">🗺️ Moliya Roadmap & Sof Boylik</div>
+      <div class="sheet-tab" data-tab="tab-settings">⚙️ Sozlamalar</div>
+    </div>
+  </footer>
+
+  <!-- MODAL: ADD TASK -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Yangi vazifa qo'shish</h2>
+        <button class="close-btn" id="btnCloseTaskModal">&times;</button>
+      </div>
+      <form id="taskForm">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Vazifa nomi</label>
+            <input type="text" id="taskInputTitle" class="form-control" style="width: 100%;" required placeholder="Masalan: Hisobotni tayyorlash">
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Muddati</label>
+            <input type="date" id="taskInputDeadline" class="form-control" style="width: 100%;" required>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Prioritet</label>
+              <select id="taskInputPriority" class="form-control" style="width: 100%;">
+                <option value="‼️ O'ta muhim">‼️ O'ta muhim</option>
+                <option value="🔥 Muhim" selected>🔥 Muhim</option>
+                <option value="⚡ O'rtacha muhim">⚡ O'rtacha muhim</option>
+                <option value="Oddiy">Oddiy</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Kategoriya</label>
+              <select id="taskInputCategory" class="form-control" style="width: 100%;">
+                <option value="Shaxsiy">Shaxsiy</option>
+                <option value="Ish" selected>Ish</option>
+                <option value="Ta'lim">Ta'lim</option>
+                <option value="Uy">Uy</option>
+                <option value="Moliya">Moliya</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Status</label>
+            <select id="taskInputStatus" class="form-control" style="width: 100%;">
+              <option value="✏️ Jarayonda" selected>✏️ Jarayonda</option>
+              <option value="✅ Bajarildi">✅ Bajarildi</option>
+              <option value="⏳ Kutilmoqda">⏳ Kutilmoqda</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Izoh / Eslatma</label>
+            <input type="text" id="taskInputNote" class="form-control" style="width: 100%;" placeholder="Qo'shimcha tafsilotlar...">
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <button type="button" class="btn btn-secondary" id="btnCancelTaskModal">Bekor qilish</button>
+            <button type="submit" class="btn btn-primary">Saqlash</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD HABIT -->
+  <div class="modal-overlay" id="habitModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Yangi odat qo'shish</h2>
+        <button class="close-btn" id="btnCloseHabitModal">&times;</button>
+      </div>
+      <form id="habitForm">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Odat nomi</label>
+            <input type="text" id="habitInputTitle" class="form-control" style="width: 100%;" required placeholder="Masalan: 🏃‍♂️ Ertalab 3 km yugurish">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Davriylik / Turi</label>
+              <select id="habitInputFrequency" class="form-control" style="width: 100%;">
+                <option value="daily" selected>📅 Kunlik (Daily)</option>
+                <option value="weekly">⚡ Haftalik (Weekly)</option>
+                <option value="monthly">🔄 Davomiy / Oylik (Recurring)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Kun tartibi (Routine)</label>
+              <select id="habitInputRoutine" class="form-control" style="width: 100%;">
+                <option value="morning">🌅 Ertalab (Morning)</option>
+                <option value="day">☀️ Kunduzi (Day / Work)</option>
+                <option value="evening">🌙 Kechqurun (Evening)</option>
+                <option value="anytime" selected>⚡ Istalgan vaqt</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">Oyiga maqsad (kun/marta soni)</label>
+            <input type="number" id="habitInputGoal" class="form-control" style="width: 100%;" value="20" min="1" max="31" required>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <button type="button" class="btn btn-secondary" id="btnCancelHabitModal">Bekor qilish</button>
+            <button type="submit" class="btn btn-primary">Qo'shish</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: KEYBOARD SHORTCUTS CHEAT SHEET -->
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h2>⌨️ Tezkor Tugmalar (Keyboard Shortcuts)</h2>
+        <button class="close-btn" id="btnCloseShortcutsModal">&times;</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+        Linear va Notion uslubidagi tezkor klaviatura kombinatsiyalari:
+      </p>
+      <div class="shortcuts-grid">
+        <div class="shortcut-item">
+          <span>Yangi vazifa kiritish</span>
+          <span class="kbd-key">Ctrl + N</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Tezkor xarajat yozish</span>
+          <span class="kbd-key">Ctrl + E</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Qidiruvga o'tish</span>
+          <span class="kbd-key">Ctrl + /</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Oynani yopish / Bekor</span>
+          <span class="kbd-key">Esc</span>
+        </div>
+        <div class="shortcut-item">
+          <span>1-varaq: Dashboard</span>
+          <span class="kbd-key">Alt + 1</span>
+        </div>
+        <div class="shortcut-item">
+          <span>2-varaq: Vazifalar</span>
+          <span class="kbd-key">Alt + 2</span>
+        </div>
+        <div class="shortcut-item">
+          <span>3-varaq: Kalendar</span>
+          <span class="kbd-key">Alt + 3</span>
+        </div>
+        <div class="shortcut-item">
+          <span>4-varaq: Odatlar</span>
+          <span class="kbd-key">Alt + 4</span>
+        </div>
+        <div class="shortcut-item">
+          <span>5-varaq: Oylik Moliya</span>
+          <span class="kbd-key">Alt + 5</span>
+        </div>
+        <div class="shortcut-item">
+          <span>6-varaq: Yillik Moliya</span>
+          <span class="kbd-key">Alt + 6</span>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <button class="btn btn-primary" id="btnOkShortcutsModal">Tushunarli</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IN-PAGE FLOATING DRAGGABLE POMODORO WIDGET -->
+  <div id="floatingPomoWidget" class="floating-pomo-widget" style="display: none;">
+    <div class="floating-pomo-header" id="floatingPomoHeader">
+      <div class="floating-pomo-title">
+        <span class="pomo-live-dot" id="floatingPomoDot"></span>
+        <span style="font-weight: 600; font-size: 12px;">🍅 Fokus Taymer</span>
+      </div>
+      <div class="floating-pomo-actions">
+        <button class="floating-icon-btn" onclick="PlannerApp.togglePipWindow()" title="Barcha dasturlar ustida qalqib chiqarish (OS PiP)">⧉</button>
+        <button class="floating-icon-btn" onclick="PlannerApp.toggleFloatingCompact()" id="btnFloatingCompact" title="Kichraytirish / Kattalashtirish">_</button>
+        <button class="floating-icon-btn" onclick="PlannerApp.hideFloatingWidget()" title="Yopish">✕</button>
+      </div>
+    </div>
+    <div class="floating-pomo-body" id="floatingPomoBody">
+      <div class="floating-pomo-task" id="floatingPomoTaskName">Vazifa: Umumiy fokus</div>
+      <div class="floating-pomo-timer" id="floatingPomoTimer">25:00</div>
+      <div class="floating-pomo-modes">
+        <button class="pomo-mini-btn active" data-mode="pomodoro" onclick="PlannerApp.setPomodoroMode('pomodoro')">25m</button>
+        <button class="pomo-mini-btn" data-mode="deep" onclick="PlannerApp.setPomodoroMode('deep')">50m</button>
+        <button class="pomo-mini-btn" data-mode="break" onclick="PlannerApp.setPomodoroMode('break')">5m</button>
+      </div>
+      <div class="floating-pomo-ctrls">
+        <button class="btn btn-primary btn-sm" id="btnFloatingPomoStart" onclick="PlannerApp.startPomodoro()">▶ Boshlash</button>
+        <button class="btn btn-secondary btn-sm" id="btnFloatingPomoPause" onclick="PlannerApp.pausePomodoro()" style="display:none;">⏸ Pauza</button>
+        <button class="btn btn-secondary btn-sm" onclick="PlannerApp.resetPomodoro()">🔄 Qayta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDDEN PIP VIDEO & CANVAS FOR FALLBACK OS-LEVEL PIP -->
+  <canvas id="pipCanvas" width="320" height="180" style="display: none;"></canvas>
+  <video id="pipVideo" width="320" height="180" autoplay muted playsinline style="display: none;"></video>
+
+  <!-- FLOATING AI AGENT FAB BUTTON (BOTTOM RIGHT CORNER) -->
+  <button id="floatingAIBtn" class="floating-ai-fab" onclick="PlannerApp.toggleAIChat()" title="AI Yordamchi bilan suhbat (Alt+A)">
+    <div class="ai-fab-icon-box">
+      <span class="ai-fab-sparkle">✨</span>
+      <span class="ai-fab-bot">🤖</span>
+    </div>
+    <span class="ai-fab-text">AI Yordamchi</span>
+    <span class="ai-fab-badge">Jonli</span>
+  </button>
+
+  <!-- AI ASSISTANT CHAT DRAWER -->
+  <div id="aiChatDrawer" class="ai-chat-drawer" style="display: none;">
+    <!-- DRAWER HEADER -->
+    <div class="ai-drawer-header">
+      <div class="ai-header-info">
+        <div class="ai-avatar">🤖</div>
+        <div>
+          <div class="ai-title-row">
+            <h4>Antigravity AI Yordamchi</h4>
+            <span class="ai-badge" id="aiActiveModelBadge" onclick="PlannerApp.toggleAISettings()" style="cursor: pointer;" title="Model sozlamalarini ochish (bosing)">Offline NLU</span>
+          </div>
+          <p class="ai-subtitle">O'zbekcha tabiiy til buyruqlari & avto-rejalashtirish</p>
+        </div>
+      </div>
+      <div class="ai-header-actions">
+        <button class="ai-tool-btn" onclick="PlannerApp.toggleAIDockSide()" id="btnAIDockSide" title="O'ng / Chap tomonga ko'chirish">⇋</button>
+        <button class="ai-tool-btn" onclick="PlannerApp.toggleAIMinimize()" id="btnAIMinimize" title="Kichraytirish / Kattalashtirish">—</button>
+        <button class="ai-tool-btn" onclick="PlannerApp.toggleAIMemoryPanel()" id="btnAIMemory" title="AI Xotirasi & Bilimlar Bazasi (O'rganilgan faktlar)">🧠</button>
+        <button class="ai-tool-btn" onclick="PlannerApp.toggleAISettings()" title="AI Model sozlamalari">⚙️</button>
+        <button class="ai-tool-btn" onclick="PlannerApp.clearAIChatHistory()" title="Chat tarixini tozalash">🗑️</button>
+        <button class="ai-tool-btn" onclick="PlannerApp.closeAIChat()" title="Yopish">✕</button>
+      </div>
+    </div>
+
+    <!-- AI MEMORY & KNOWLEDGE BASE PANEL (COLLAPSIBLE) -->
+    <div id="aiMemoryPanel" class="ai-memory-panel" style="display: none;">
+      <div class="ai-mem-header">
+        <div>
+          <span style="font-size: 13px; font-weight: 700; color: #1a73e8;">🧠 AI Xotirasi & Bilimlar Bazasi</span>
+          <p style="font-size: 10px; color: var(--text-muted); margin: 2px 0 0 0;">Agent siz haqingizda o'rgangan ma'lumotlar va doimiy xotira</p>
+        </div>
+        <button class="ai-mem-close-btn" onclick="PlannerApp.toggleAIMemoryPanel()">✕</button>
+      </div>
+
+      <!-- MEMORY SUB-TABS -->
+      <div class="ai-mem-nav">
+        <button class="ai-mem-tab active" data-memtab="profile" onclick="PlannerApp.switchMemoryTab('profile')">👤 Shaxsiy Profil</button>
+        <button class="ai-mem-tab" data-memtab="facts" onclick="PlannerApp.switchMemoryTab('facts')">📚 Faktlar (<span id="memFactsCount">0</span>)</button>
+        <button class="ai-mem-tab" data-memtab="insights" onclick="PlannerApp.switchMemoryTab('insights')">📊 Live Tahlil</button>
+      </div>
+
+      <!-- TAB 1: PROFILE -->
+      <div id="memTabProfile" class="ai-mem-tab-content active">
+        <div class="mem-form-grid">
+          <div class="form-group">
+            <label>Ismingiz:</label>
+            <input type="text" id="agentMemName" class="form-control" placeholder="Ismingiz">
+          </div>
+          <div class="form-group">
+            <label>Kasbingiz / Faoliyatingiz:</label>
+            <input type="text" id="agentMemOccupation" class="form-control" placeholder="Masalan: Dasturchi, Muhandis">
+          </div>
+          <div class="form-group">
+            <label>🌅 Odatdagi uyg'onish vaqti:</label>
+            <input type="time" id="agentMemWakeTime" class="form-control" value="05:00">
+          </div>
+          <div class="form-group">
+            <label>🌙 Odatdagi uyquga yotish:</label>
+            <input type="time" id="agentMemSleepTime" class="form-control" value="23:00">
+          </div>
+          <div class="form-group">
+            <label>💰 Oylik jamg'arma maqsadi (so'm):</label>
+            <input type="number" id="agentMemSavingsGoal" class="form-control" placeholder="5000000">
+          </div>
+          <div class="form-group">
+            <label>🎭 AI Muloqot uslubi (Xarakteri):</label>
+            <select id="agentMemTone" class="form-control">
+              <option value="coach">🌱 Ruhlantiruvchi Murabbiy (Do'stona & Tavsiyaviy)</option>
+              <option value="strict">⚡ Qat'iy & Talabchan (Intizom va muddatlar nazorati)</option>
+              <option value="analyst">📊 Moliyaviy Tahlilchi (Aniq raqamlar va tejamkorlik)</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>🎯 Bosh maqsad (Vision):</label>
+            <input type="text" id="agentMemPrimaryGoal" class="form-control" placeholder="Yil oxirigacha yangi uy, yangi loyiha yoki moliyaviy erkinlik...">
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn btn-primary btn-sm" onclick="PlannerApp.saveAgentMemoryProfile()" style="flex: 2; font-size: 11px;">💾 Profilni Saqlash</button>
+          <button class="btn btn-secondary btn-sm" onclick="PlannerApp.triggerProactiveQuestion()" style="flex: 1.5; font-size: 11px;">🎯 Savol Ber</button>
+        </div>
+      </div>
+
+      <!-- TAB 2: LEARNED FACTS -->
+      <div id="memTabFacts" class="ai-mem-tab-content" style="display: none;">
+        <div class="mem-facts-header">
+          <span style="font-size: 11px; font-weight: 600;">O'rganilgan shaxsiy faktlar ro'yxati:</span>
+          <span style="font-size: 10px; color: var(--text-muted);">Chatda yozishingiz bilan o'zi o'rganadi</span>
+        </div>
+        <div id="memFactsList" class="mem-facts-list">
+          <!-- Dynamic facts chips -->
+        </div>
+        <!-- Add fact manually -->
+        <div class="mem-add-fact-row">
+          <input type="text" id="agentMemNewFactInput" class="form-control" placeholder="Yangi fakt: 'Kofe ichmayman', 'Har shanba sport'..." style="font-size: 11px;">
+          <select id="agentMemNewFactCat" class="form-control" style="font-size: 11px; width: 110px;">
+            <option value="kun_tartibi">Kun tartibi</option>
+            <option value="moliya">Moliya</option>
+            <option value="unumdorlik">Unumdorlik</option>
+            <option value="shaxsiy">Shaxsiy</option>
+          </select>
+          <button class="btn btn-sm btn-primary" onclick="PlannerApp.addManualAgentFact()" style="font-size: 11px; white-space: nowrap;">➕ Qo'shish</button>
+        </div>
+      </div>
+
+      <!-- TAB 3: LIVE INSIGHTS -->
+      <div id="memTabInsights" class="ai-mem-tab-content" style="display: none;">
+        <div class="mem-insights-box" id="memLiveInsightsBox">
+          <!-- Injected live RAG stats -->
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn btn-secondary btn-sm" onclick="PlannerApp.exportAgentMemoryJson()" style="flex: 1; font-size: 11px;">⬇️ JSON Yuklab Olish</button>
+          <button class="btn btn-outline-danger btn-sm" onclick="PlannerApp.resetAgentMemory()" style="flex: 1; font-size: 11px;">🗑️ Xotirani Reset Qilish</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI SETTINGS PANEL (COLLAPSIBLE) -->
+    <div id="aiSettingsPanel" class="ai-settings-panel" style="display: none;">
+      <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">🧠 AI Model Sozlamalari</div>
+      
+      <div class="form-group" style="margin-bottom: 8px;">
+        <label style="font-size: 11px;">Model turi:</label>
+        <select id="aiModelTypeSelect" class="form-control" onchange="PlannerApp.onAIModelTypeChange()" style="font-size: 12px; padding: 4px 8px;">
+          <option value="offline">⚡ O'rnatilgan O'zbek AI NLU (Offline, Bepul, Tezkor)</option>
+          <option value="gemini">✨ Google Gemini API (Bulutli Generativ LLM)</option>
+          <option value="ollama">🦙 Mahalliy Ollama (Llama 3 / Qwen / Gemma)</option>
+        </select>
+      </div>
+
+      <div id="geminiSettingsRow" style="display: none; margin-bottom: 12px; background: #f8fafd; border: 1px solid #d2e3fc; border-radius: 8px; padding: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label style="font-size: 11px; font-weight: 700; color: #1a73e8; margin: 0;">Google Gemini API Key:</label>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #1a73e8; font-weight: 600; text-decoration: underline;">🔑 Kalit olish (Bepul) ↗</a>
+        </div>
+        
+        <div style="position: relative; margin-bottom: 6px;">
+          <input type="password" id="geminiApiKeyInput" class="form-control" placeholder="AIzaSy..." style="font-size: 12px; padding: 6px 32px 6px 8px;">
+          <button type="button" onclick="PlannerApp.toggleGeminiKeyVisibility()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; font-size: 14px;" title="Ko'rish / Yashirish">👁️</button>
+        </div>
+
+        <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+          <label style="font-size: 11px; color: var(--text-muted); margin: 0; white-space: nowrap;">Model:</label>
+          <select id="geminiModelSelect" class="form-control" style="font-size: 11px; padding: 3px 6px; flex: 1;">
+            <option value="gemini-4-argon" selected>🔥 4 Argon (Murakkab vazifalar / Eng kuchli)</option>
+            <option value="gemini-3.1-pro">🧠 3.1 Pro (Chuqur fikrlash & Reasoning)</option>
+            <option value="gemini-3.8-flash">⚡ 3.8 Flash (Universal yordamchi)</option>
+            <option value="gemini-3.5-flash-lite">🏎️ 3.5 Flash-Lite (Eng tezkor javoblar)</option>
+            <option value="auto">🤖 Avto-aniqlash (Mavjud model)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="PlannerApp.testGeminiKey()" style="font-size: 11px; padding: 4px 10px;">🔌 Ulanishni tekshirish</button>
+          <span id="geminiTestStatus" style="font-size: 10px; flex: 1;"></span>
+        </div>
+        <small style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 6px; line-height: 1.3;">
+          💡 <em>Kalit brauzeringizda xavfsiz saqlanadi. Google AI Studiodan olingan bepul kalit kuniga 1 500 ta bepul so'rov beradi.</em>
+        </small>
+      </div>
+
+      <div id="ollamaSettingsRow" style="display: none; margin-bottom: 8px;">
+        <label style="font-size: 11px;">Ollama URL va Model:</label>
+        <div style="display: flex; gap: 4px;">
+          <input type="text" id="ollamaUrlInput" class="form-control" value="http://localhost:11434" style="font-size: 12px; flex: 2; padding: 4px 6px;">
+          <input type="text" id="ollamaModelInput" class="form-control" value="llama3" placeholder="model" style="font-size: 12px; flex: 1; padding: 4px 6px;">
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-sm" onclick="PlannerApp.saveAISettings()" style="width: 100%; font-size: 11px;">Saqlash</button>
+    </div>
+
+    <!-- SUGGESTION CHIPS -->
+    <div class="ai-suggestions-strip">
+      <button class="ai-chip" style="background: #e8f0fe; color: #1a73e8; border-color: #1a73e8; font-weight: 600;" onclick="PlannerApp.triggerProactiveQuestion()">🎯 Meni o'rgan (Savol ber)</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('Men haqimda nimalarni bilasan?')">🧠 Men haqimda nima bilasan?</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('Bugungi umumiy holatim va hisobot qanday?')">📊 Bugungi umumiy hisobot</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('Ertaga 5 da turishim kerak')">🌅 Ertaga 5:00 da turish (Budilnik + Vazifa)</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('Har kuni ertalab bomdod o\'qishim kerak')">🕌 Har kuni Bomdod (Odat)</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('Bugun tushlikka 45 000 so\'m ishlatdim')">🍲 Tushlik 45 ming (Xarajat)</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('Har kuni kitob o\'qish')">📚 Har kuni kitob (Odat)</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('Oyiga 15 000 000 so\'m maosh oldim')">💰 15 mln maosh (Daromad)</button>
+      <button class="ai-chip" onclick="PlannerApp.sendQuickPrompt('25 minut pomodoro fokus boshla')">⏱️ 25m Pomodoro fokus</button>
+    </div>
+
+    <!-- CHAT MESSAGES CONTAINER -->
+    <div class="ai-messages-container" id="aiMessagesContainer">
+      <!-- Injected dynamically -->
+    </div>
+
+    <!-- CHAT INPUT BAR -->
+    <div class="ai-input-bar">
+      <textarea id="aiChatInput" class="ai-chat-input" placeholder="Yozing: masalan 'Ertaga 5 da turishim kerak' yoki 'har kuni bomdod'..." rows="1" onkeydown="PlannerApp.onAIChatKeyDown(event)" oninput="PlannerApp.onAIChatInputResize(this)"></textarea>
+      <button id="btnVoiceInput" class="ai-voice-btn" onclick="PlannerApp.toggleVoiceInput()" title="Ovozli kiritish (Mikrofon)">🎙️</button>
+      <button id="btnSendAIChat" class="ai-send-btn" onclick="PlannerApp.sendAIChatMessage()" title="Yuborish">➤</button>
+    </div>
+    <div class="ai-input-hint-row">
+      <span>💡 <b>Enter</b>: Yuborish • <b>Shift+Enter</b>: Yangi qator</span>
+      <span id="aiCharCount" style="opacity: 0.8;">0 belgi</span>
+    </div>
+  </div>
+
+  <!-- ACTIVE RINGING ALARM MODAL -->
+  <div id="alarmAlertModal" class="modal-overlay" style="display: none; z-index: 9999999;">
+    <div class="alarm-ringing-card">
+      <div class="alarm-bell-anim">⏰</div>
+      <h2 style="color: #ea4335; margin: 8px 0 4px 0; font-size: 24px;">BUDILNIK CHALMOQDA!</h2>
+      <div class="alarm-time-display" id="ringingAlarmTime">05:00</div>
+      <div class="alarm-label-display" id="ringingAlarmLabel">Ertalab 5:00 da turish</div>
+      <div class="alarm-actions-row">
+        <button class="btn btn-danger btn-lg" onclick="PlannerApp.dismissActiveAlarm()" style="font-weight: 700; padding: 10px 20px;">🔕 Budilnikni o'chirish</button>
+        <button class="btn btn-secondary btn-lg" onclick="PlannerApp.snoozeActiveAlarm(5)" style="padding: 10px 20px;">⏱️ 5 daqiqa kutilsin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFETTI CELEBRATION CANVAS -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <script src="app.js"></script>
+</body>
+</html>

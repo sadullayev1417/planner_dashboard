@@ -1,0 +1,32 @@
+{
+  "profile": {
+    "name": "Foydalanuvchi",
+    "occupation": "Dasturchi / Mutaxassis",
+    "wakeTime": "05:00",
+    "sleepTime": "23:00",
+    "monthlySavingsGoal": 5000000,
+    "personalityTone": "coach",
+    "primaryGoal": "Shaxsiy unumdorlik va moliyaviy barqarorlik"
+  },
+  "learnedFacts": [
+    {
+      "id": 1,
+      "fact": "Ertalab soat 5:00 da uyg'onadi va Bomdod o'qiydi",
+      "category": "kun_tartibi",
+      "date": "2026-10-21"
+    },
+    {
+      "id": 2,
+      "fact": "Odatda tushlik va ovqatlanish uchun kuniga 40 000 - 50 000 so'm xarajat qiladi",
+      "category": "moliya",
+      "date": "2026-10-21"
+    },
+    {
+      "id": 3,
+      "fact": "Pomodoro fokus vaqti (25 daqiqa) bilan ishlashni ma'qul ko'radi",
+      "category": "unumdorlik",
+      "date": "2026-10-21"
+    }
+  ],
+  "coachingHistory": []
+}
